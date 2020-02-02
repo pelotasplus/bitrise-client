@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="viewModel"
+            type="pl.pelotasplus.bitrise.features.project_details.ProjectDetailsViewModel" />
+
+        <variable
+            name="viewState"
+            type="pl.pelotasplus.bitrise.features.project_details.ProjectDetailsViewState" />
+
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        tools:context=".features.projects_list.ProjectDetailsFragment">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/margin_normal"
+            android:text="@{@string/project_name(viewState.projectName)}"
+            android:textAppearance="@android:style/TextAppearance.Material.Title" />
+
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:onRefreshListener="@{() -> viewModel.onRefreshClicked()}"
+            app:refreshing="@{viewState.refreshing}">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/buildsList"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:itemBinding="@{viewState.getItemBinding(viewModel)}"
+                app:items="@{viewState.builds}"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    </LinearLayout>
+
+</layout>

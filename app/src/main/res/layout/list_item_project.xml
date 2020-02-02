@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <variable
+            name="viewModel"
+            type="pl.pelotasplus.bitrise.features.projects_list.ProjectsListViewModel" />
+
+        <variable
+            name="viewState"
+            type="pl.pelotasplus.bitrise.features.projects_list.ProjectsListItemViewState" />
+
+
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:foreground="?attr/selectableItemBackground"
+        android:onClick="@{() -> viewModel.onProjectClicked(viewState)}"
+        android:padding="@dimen/margin_normal">
+
+        <ImageView
+            android:id="@+id/platform_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="@dimen/margin_normal"
+            app:imageResource="@{viewState.platformIcon}"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/owner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/margin_large"
+            android:text="@{viewState.repoOwner}"
+            android:textAppearance="@android:style/TextAppearance.Material.Small"
+            app:layout_constraintBottom_toTopOf="@id/project"
+            app:layout_constraintStart_toEndOf="@id/platform_icon"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/project"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/margin_large"
+            android:ellipsize="end"
+            android:text="@{viewState.name}"
+            android:textAppearance="@android:style/TextAppearance.Material.Title"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/platform_icon"
+            app:layout_constraintTop_toBottomOf="@id/owner" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</layout>
