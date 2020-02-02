@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/filter"
+        android:icon="@drawable/ic_search_24"
+        android:title="@string/filter"
+        app:showAsAction="ifRoom|withText" />
+    <item
+        android:id="@+id/sort_by"
+        android:icon="@drawable/ic_sort_24"
+        android:title="@string/sort_by"
+        app:showAsAction="ifRoom|withText">
+        <menu>
+            <item
+                android:id="@+id/sort_by_project_name"
+                android:title="@string/by_project_name" />
+            <item
+                android:id="@+id/sort_by_owner"
+                android:title="@string/by_repo_owner" />
+        </menu>
+    </item>
+</menu>

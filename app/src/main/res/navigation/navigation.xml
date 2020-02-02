@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@+id/project_list">
+
+    <fragment
+        android:id="@+id/project_list"
+        android:name="pl.pelotasplus.bitrise.features.projects_list.ProjectsListFragment"
+        android:label="@string/projects_list"
+        tools:layout="@layout/fragment_projects_list">
+        <action
+            android:id="@+id/action_project_list_to_project_details"
+            app:destination="@id/project_details" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/project_details"
+        android:name="pl.pelotasplus.bitrise.features.project_details.ProjectListFragment"
+        android:label="@string/project_details"
+        tools:layout="@layout/fragment_projects_list">
+        <argument
+            android:name="project"
+            app:argType="pl.pelotasplus.bitrise.domain.models.Project"
+            app:nullable="false" />
+    </fragment>
+
+</navigation>

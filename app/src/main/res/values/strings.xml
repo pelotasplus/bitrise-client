@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Bitrise Client</string>
+    <string name="projects_list">Projects list</string>
+    <string name="project_details">Project details</string>
+    <string name="sort_by">Sort by…</string>
+    <string name="by_project_name">by project name</string>
+    <string name="by_repo_owner">by repo owner</string>
+    <string name="build_number">Build #%d</string>
+    <string name="project_name">Project name: %s</string>
+    <string name="filter">Filter...</string>
+    <string name="filter_projects_by_name">Filter projects by name ...</string>
+</resources>
