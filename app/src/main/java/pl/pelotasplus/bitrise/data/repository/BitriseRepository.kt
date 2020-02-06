@@ -21,6 +21,11 @@ class BitriseRepository @Inject constructor(
             .data
             .map { it.toProject() }
 
+    suspend fun buildsCoro(project: Project) =
+        bitriseApi.buildsCoro(authorizationToken, project.slug)
+            .data
+            .map { it.toBuild() }
+
     fun appsRx() =
         bitriseApi.appsRx(authorizationToken)
             .map { it.data }

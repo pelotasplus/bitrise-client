@@ -1,59 +1,53 @@
 package pl.pelotasplus.bitrise.features.project_details
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.squareup.inject.assisted.Assisted
 import com.squareup.inject.assisted.AssistedInject
-import io.reactivex.Scheduler
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.rxkotlin.addTo
-import io.reactivex.rxkotlin.subscribeBy
-import io.reactivex.subjects.PublishSubject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.ConflatedBroadcastChannel
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import pl.pelotasplus.bitrise.data.repository.BitriseRepository
-import pl.pelotasplus.bitrise.di.AppModule
 import pl.pelotasplus.bitrise.domain.models.Project
-import javax.inject.Named
 
 class ProjectDetailsViewModel @AssistedInject constructor(
     @Assisted private val project: Project,
-    bitriseRepository: BitriseRepository,
-    @Named(AppModule.IO_SCHEDULER) ioScheduler: Scheduler,
-    @Named(AppModule.UI_SCHEDULER) uiScheduler: Scheduler
+    bitriseRepository: BitriseRepository
 ) : ViewModel() {
 
     val viewState = ProjectDetailsViewState()
 
-    private val compositeDisposable = CompositeDisposable()
-    private val retry = PublishSubject.create<Unit>()
+    private val retry = ConflatedBroadcastChannel(Unit)
 
     init {
-        retry.startWith(Unit)
-            .flatMapSingle {
-                bitriseRepository.buildsRx(project)
-                    .subscribeOn(ioScheduler)
+        retry.asFlow()
+            .onStart {
+                viewState.projectName.value = project.name
+                viewState.isRefreshing.value = true
+            }
+            .flowOn(Dispatchers.Main)
+            .map {
+                bitriseRepository.buildsCoro(project)
             }
             .map { builds ->
                 builds.map { build -> build.toListItemViewState(project) }
             }
-            .observeOn(uiScheduler)
-            .doOnSubscribe {
-                viewState.projectName.value = project.name
-                viewState.isRefreshing.value = true
+            .flowOn(Dispatchers.IO)
+            .onEach { builds ->
+                viewState.builds.value = builds
+                viewState.isRefreshing.value = false
             }
-            .subscribeBy(
-                onNext = { builds ->
-                    viewState.builds.value = builds
-                    viewState.isRefreshing.value = false
-                },
-                onError = {
-                    viewState.isRefreshing.value = false
-                }
-            )
-            .addTo(compositeDisposable)
-    }
-
-    override fun onCleared() {
-        compositeDisposable.clear()
-        super.onCleared()
+            .catch { exc ->
+                viewState.snackBar.value = exc.message
+                viewState.isRefreshing.value = false
+            }
+            .launchIn(viewModelScope)
     }
 
     fun onBuildClicked(viewState: BuildsListItemViewState) {
@@ -61,7 +55,7 @@ class ProjectDetailsViewModel @AssistedInject constructor(
     }
 
     fun onRefreshClicked() {
-        retry.onNext(Unit)
+        retry.offer(Unit)
     }
 
     @AssistedInject.Factory
