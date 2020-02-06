@@ -3,90 +3,86 @@ package pl.pelotasplus.bitrise.features.projects_list
 import androidx.annotation.IdRes
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.reactivex.Observable
-import io.reactivex.Scheduler
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.rxkotlin.addTo
-import io.reactivex.rxkotlin.subscribeBy
-import io.reactivex.subjects.BehaviorSubject
 import io.reactivex.subjects.PublishSubject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.ConflatedBroadcastChannel
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import pl.pelotasplus.bitrise.R
 import pl.pelotasplus.bitrise.data.repository.BitriseRepository
-import pl.pelotasplus.bitrise.di.AppModule.Companion.IO_SCHEDULER
-import pl.pelotasplus.bitrise.di.AppModule.Companion.UI_SCHEDULER
 import pl.pelotasplus.bitrise.navigation.NavigationEvent
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import javax.inject.Named
 
 class ProjectsListViewModel @Inject constructor(
-    private val bitriseRepository: BitriseRepository,
-    @Named(IO_SCHEDULER) private val ioScheduler: Scheduler,
-    @Named(UI_SCHEDULER) private val uiScheduler: Scheduler
+    private val bitriseRepository: BitriseRepository
 ) : ViewModel() {
 
     private val _navigationChannel = PublishSubject.create<NavigationEvent>()
     val navigation: Observable<NavigationEvent> = _navigationChannel
     val viewState = ProjectsListViewState()
 
-    private val compositeDisposable = CompositeDisposable()
-    private val retry = PublishSubject.create<Unit>()
-    private val sortBy = BehaviorSubject.createDefault(SortMethod.NONE)
-    private val filter = BehaviorSubject.createDefault<String>("")
+    private val retry = ConflatedBroadcastChannel(Unit)
+    private val sortBy = ConflatedBroadcastChannel(SortMethod.NONE)
+    private val filter = ConflatedBroadcastChannel("")
 
     private val nameFilterObserver = Observer<String> {
-        filter.onNext(it)
+        filter.offer(it)
     }
 
     init {
         viewState.nameFilter.observeForever(nameFilterObserver)
 
-        retry.startWith(Unit)
-            .flatMapSingle {
-                bitriseRepository.appsRx()
-                    .subscribeOn(ioScheduler)
+        retry.asFlow()
+            .onStart {
+                viewState.isRefreshing.value = true
+            }
+            .flowOn(Dispatchers.Main)
+            .map {
+                bitriseRepository.appsCoro()
             }
             .map { projects ->
                 projects.map { project -> project.toListItemViewState() }
             }
-            .flatMap { projects ->
-                sortBy.map { sortMethod ->
-                    projects.sortedBy {
-                        when (sortMethod) {
-                            SortMethod.NONE -> null
-                            SortMethod.BY_PROJECT_NAME -> it.name.toLowerCase(Locale.getDefault())
-                            SortMethod.BY_REPO_OWNER -> it.repoOwner.toLowerCase(Locale.getDefault())
-                        }
+            .combine(sortBy.asFlow()) { projects, sortMethod ->
+                projects.sortedBy {
+                    when (sortMethod) {
+                        SortMethod.NONE -> null
+                        SortMethod.BY_PROJECT_NAME -> it.name.toLowerCase(Locale.getDefault())
+                        SortMethod.BY_REPO_OWNER -> it.repoOwner.toLowerCase(Locale.getDefault())
                     }
                 }
             }
-            .switchMap { projects ->
-                filter
-                    .debounce(500L, TimeUnit.MILLISECONDS, ioScheduler)
+            .combine(
+                filter.asFlow()
+                    .debounce(500L)
                     .distinctUntilChanged()
-                    .map { filterValue ->
-                        projects.filter { it.name.contains(filterValue, ignoreCase = true) }
-                    }
+            ) { projects, filterValue ->
+                projects.filter { it.name.contains(filterValue, ignoreCase = true) }
             }
-            .observeOn(uiScheduler)
-            .doOnSubscribe {
-                viewState.isRefreshing.value = true
+            .flowOn(Dispatchers.IO)
+            .onEach {
+                viewState.projects.value = it
+                viewState.isRefreshing.value = false
             }
-            .subscribeBy(
-                onNext = {
-                    viewState.projects.value = it
-                    viewState.isRefreshing.value = false
-                },
-                onError = {
-                    viewState.isRefreshing.value = false
-                }
-            )
-            .addTo(compositeDisposable)
+            .catch { exc ->
+                viewState.snackBar.value = exc.message
+            }
+            .launchIn(viewModelScope)
     }
 
     fun onRefreshClicked() {
-        retry.onNext(Unit)
+        retry.offer(Unit)
     }
 
     fun onProjectClicked(viewState: ProjectsListItemViewState) {
@@ -94,12 +90,11 @@ class ProjectsListViewModel @Inject constructor(
     }
 
     fun onSortMethodChanged(@IdRes itemId: Int) {
-        sortBy.onNext(SortMethod.fromMenuItemId(itemId))
+        sortBy.offer(SortMethod.fromMenuItemId(itemId))
     }
 
     override fun onCleared() {
         viewState.nameFilter.removeObserver(nameFilterObserver)
-        compositeDisposable.clear()
         super.onCleared()
     }
 

@@ -9,10 +9,11 @@ import android.view.MenuItem
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
+import androidx.lifecycle.observe
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import pl.pelotasplus.bitrise.R
 import pl.pelotasplus.bitrise.databinding.FragmentProjectsListBinding
 import pl.pelotasplus.bitrise.extensions.appComponent
@@ -50,20 +51,19 @@ class ProjectsListFragment : Fragment() {
                 )
         }
         .also {
-            projectListViewModel.viewState
-                .filterMode
-                .observe(
-                    viewLifecycleOwner,
-                    Observer { filterMode ->
-                        if (!filterMode) {
-                            (requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
-                                .hideSoftInputFromWindow(
-                                    it.root.windowToken,
-                                    InputMethodManager.HIDE_NOT_ALWAYS
-                                )
-                        }
-                    }
-                )
+            projectListViewModel.viewState.filterMode.observe(viewLifecycleOwner) { filterMode ->
+                if (!filterMode) {
+                    (requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                        .hideSoftInputFromWindow(
+                            it.root.windowToken,
+                            InputMethodManager.HIDE_NOT_ALWAYS
+                        )
+                }
+            }
+
+            projectListViewModel.viewState.snackBar.observe(viewLifecycleOwner) { message ->
+                Snackbar.make(it.root, message, Snackbar.LENGTH_LONG).show()
+            }
         }
         .also {
             setHasOptionsMenu(true)

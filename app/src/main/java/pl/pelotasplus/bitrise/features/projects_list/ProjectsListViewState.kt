@@ -8,6 +8,7 @@ import pl.pelotasplus.bitrise.R
 data class ProjectsListViewState(
     val isRefreshing: MutableLiveData<Boolean> = MutableLiveData(),
     val filterMode: MutableLiveData<Boolean> = MutableLiveData(false),
+    val snackBar: MutableLiveData<String> = MutableLiveData(),
     val nameFilter: MutableLiveData<String> = MutableLiveData(),
     val projects: MutableLiveData<List<ProjectsListItemViewState>> = MutableLiveData()
 ) {
